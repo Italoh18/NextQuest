@@ -10,14 +10,16 @@ CREATE TABLE IF NOT EXISTS users (
     player_type TEXT,
     play_days TEXT, -- JSON array of days
     platforms TEXT, -- JSON array of platforms
+    hours_per_day REAL DEFAULT 2, -- Default hours per day for backlog reality
     is_premium INTEGER DEFAULT 0, -- 0 for false, 1 for true
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- Games Table (Master Catalog)
+-- Games Table (Master Catalog - Aligned with RAWG)
 CREATE TABLE IF NOT EXISTS games (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    title TEXT UNIQUE NOT NULL,
+    id INTEGER PRIMARY KEY, -- RAWG ID
+    slug TEXT UNIQUE,
+    title TEXT NOT NULL,
     description TEXT,
     cover_url TEXT,
     steam_link TEXT,
@@ -31,12 +33,17 @@ CREATE TABLE IF NOT EXISTS games (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE INDEX IF NOT EXISTS idx_games_title ON games(title);
+CREATE INDEX IF NOT EXISTS idx_games_slug ON games(slug);
+CREATE INDEX IF NOT EXISTS idx_user_games_user ON user_games(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_games_game ON user_games(game_id);
+
 -- User Games (Tracking/Backlog)
 CREATE TABLE IF NOT EXISTS user_games (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
     game_id INTEGER NOT NULL,
-    status TEXT DEFAULT 'backlog', -- 'backlog', 'playing', 'completed', 'dropped'
+    status TEXT DEFAULT 'backlog', -- 'backlog', 'playing', 'completed', 'dropped', 'wishlist', 'paused'
     hours_played REAL DEFAULT 0,
     user_rating REAL, -- 1 to 10 (average of categories)
     rating_sound INTEGER,
@@ -48,6 +55,7 @@ CREATE TABLE IF NOT EXISTS user_games (
     recommend_next_game_id INTEGER, -- "If you liked this, play that"
     added_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     completed_at DATETIME,
+    UNIQUE(user_id, game_id),
     FOREIGN KEY (user_id) REFERENCES users(id),
     FOREIGN KEY (game_id) REFERENCES games(id),
     FOREIGN KEY (recommend_next_game_id) REFERENCES games(id)
@@ -60,6 +68,7 @@ CREATE TABLE IF NOT EXISTS checklists (
     game_id INTEGER NOT NULL,
     task TEXT NOT NULL,
     completed INTEGER DEFAULT 0, -- 0 for false, 1 for true
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id),
     FOREIGN KEY (game_id) REFERENCES games(id)
 );
@@ -88,8 +97,3 @@ CREATE TABLE IF NOT EXISTS plan_games (
 
 -- Initial Admin User (if not exists)
 INSERT OR IGNORE INTO users (email, password, role, name) VALUES ('admin@nextquest.com', '79913061', 'admin', 'Administrador');
-
--- Initial Games
-INSERT OR IGNORE INTO games (title, description, cover_url, time_to_beat, time_to_platinum, genre, steam_link) VALUES 
-('The Last of Us Part I', 'Experience the emotional storytelling and unforgettable characters in The Last of Us, winner of over 200 Game of the Year awards.', 'https://images.igdb.com/igdb/image/upload/t_cover_big/co5xex.png', 15, 25, 'Action-Adventure', 'https://store.steampowered.com/app/1888110/The_Last_of_Us_Part_I/'),
-('A Plague Tale: Requiem', 'Embark on a heartrending journey into a brutal, breathtaking world, and discover the cost of saving those you love in a desperate struggle for survival.', 'https://images.igdb.com/igdb/image/upload/t_cover_big/co524b.png', 18, 30, 'Adventure', 'https://store.steampowered.com/app/1182900/A_Plague_Tale_Requiem/');

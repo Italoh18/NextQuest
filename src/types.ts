@@ -6,6 +6,7 @@ export interface User {
   player_type?: string;
   play_days?: string; // JSON string or comma separated
   platforms?: string; // JSON string or comma separated
+  hours_per_day?: number;
   is_premium?: boolean;
   created_at?: string;
 }

@@ -29,8 +29,9 @@ async function startServer() {
 
   const usersInfo = db.prepare("PRAGMA table_info(users)").all() as any[];
   const hasUserFields = usersInfo.some(col => col.name === 'name');
+  const hasHoursPerDay = usersInfo.some(col => col.name === 'hours_per_day');
 
-  if (!hasPublicRating || !hasRatingSound || !hasUserFields) {
+  if (!hasPublicRating || !hasRatingSound || !hasUserFields || !hasHoursPerDay) {
     console.log('Migrating database: adding new columns...');
     db.prepare('DROP TABLE IF EXISTS plan_games').run();
     db.prepare('DROP TABLE IF EXISTS checklists').run();
@@ -46,6 +47,12 @@ async function startServer() {
   app.use(express.json());
   app.use(cookieParser());
   app.use(cors());
+
+  // Request logging
+  app.use((req, res, next) => {
+    console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+    next();
+  });
 
   // Auth Middleware
   const authenticate = (req: any, res: any, next: any) => {
@@ -132,7 +139,47 @@ async function startServer() {
   });
 
   app.get('/api/auth/me', authenticate, (req: any, res) => {
-    res.json({ user: req.user });
+    const user = db.prepare('SELECT id, email, role, name, player_type, play_days, platforms, hours_per_day, is_premium FROM users WHERE id = ?').get(req.user.id);
+    res.json({ user });
+  });
+
+  app.put('/api/user/profile', authenticate, (req: any, res) => {
+    const { name, password } = req.body;
+    if (password) {
+      db.prepare('UPDATE users SET name = ?, password = ? WHERE id = ?').run(name, password, req.user.id);
+    } else {
+      db.prepare('UPDATE users SET name = ? WHERE id = ?').run(name, req.user.id);
+    }
+    res.json({ success: true });
+  });
+
+  app.put('/api/user/preferences', authenticate, (req: any, res) => {
+    const { play_days, hours_per_day } = req.body;
+    db.prepare('UPDATE users SET play_days = ?, hours_per_day = ? WHERE id = ?')
+      .run(JSON.stringify(play_days), hours_per_day, req.user.id);
+    res.json({ success: true });
+  });
+
+  app.get('/api/user/stats', authenticate, (req: any, res) => {
+    const mostPlayed = db.prepare(`
+      SELECT g.title, g.cover_url, ug.hours_played
+      FROM user_games ug
+      JOIN games g ON ug.game_id = g.id
+      WHERE ug.user_id = ?
+      ORDER BY ug.hours_played DESC
+      LIMIT 5
+    `).all(req.user.id);
+
+    const lastTask = db.prepare(`
+      SELECT c.*, g.title as game_title
+      FROM checklists c
+      JOIN games g ON c.game_id = g.id
+      WHERE c.user_id = ?
+      ORDER BY c.id DESC
+      LIMIT 1
+    `).get(req.user.id);
+
+    res.json({ mostPlayed, lastTask });
   });
 
   // Games Catalog

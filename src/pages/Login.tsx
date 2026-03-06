@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { Gamepad2, Mail, Lock, ArrowRight } from 'lucide-react';
 import { motion } from 'motion/react';
+import { Link } from 'react-router-dom';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -111,7 +112,15 @@ export default function Login() {
             </button>
           </form>
 
-          <div className="mt-8 pt-8 border-t border-white/5 text-center">
+          <div className="mt-8 pt-8 border-t border-white/5 flex flex-col gap-4 text-center">
+            {!isAdminMode && (
+              <p className="text-zinc-500 text-sm">
+                Não tem uma conta?{' '}
+                <Link to="/register" className="text-emerald-500 hover:text-emerald-400 font-semibold transition-colors">
+                  Cadastre-se agora
+                </Link>
+              </p>
+            )}
             <button 
               onClick={() => {
                 setIsAdminMode(!isAdminMode);

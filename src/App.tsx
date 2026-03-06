@@ -1,7 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect, createContext, useContext } from 'react';
 import { User } from './types';
-import { LogOut, Gamepad2, LayoutDashboard, Library, Calendar, ShieldCheck, Menu, X, Languages } from 'lucide-react';
+import { LogOut, Gamepad2, LayoutDashboard, Library, Calendar, ShieldCheck, Menu, X, Languages, User as UserIcon, ListTodo } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Language, translations } from './i18n';
 
@@ -13,6 +13,8 @@ import GameCatalog from './pages/GameCatalog';
 import GameDetail from './pages/GameDetail';
 import PlanningTool from './pages/PlanningTool';
 import AdminDashboard from './pages/AdminDashboard';
+import Profile from './pages/Profile';
+import Tasks from './pages/Tasks';
 
 // Contexts
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -56,6 +58,8 @@ function AppContent() {
             <Route path="/catalog" element={user ? <GameCatalog /> : <Navigate to="/login" />} />
             <Route path="/game/:id" element={user ? <GameDetail /> : <Navigate to="/login" />} />
             <Route path="/planning" element={user ? <PlanningTool /> : <Navigate to="/login" />} />
+            <Route path="/profile" element={user ? <Profile /> : <Navigate to="/login" />} />
+            <Route path="/tasks" element={user ? <Tasks /> : <Navigate to="/login" />} />
             <Route path="/admin" element={user?.role === 'admin' ? <AdminDashboard /> : <Navigate to="/" />} />
           </Routes>
         </main>
@@ -73,7 +77,9 @@ function Navbar() {
   const navItems = [
     { label: t.dashboard, icon: LayoutDashboard, path: '/' },
     { label: t.catalog, icon: Library, path: '/catalog' },
+    { label: 'Tarefas', icon: ListTodo, path: '/tasks' },
     { label: t.planning, icon: Calendar, path: '/planning' },
+    { label: 'Perfil', icon: UserIcon, path: '/profile' },
   ];
 
   if (user?.role === 'admin') {
