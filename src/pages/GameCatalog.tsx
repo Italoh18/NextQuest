@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Game, UserGame } from '../types';
-import { useAuth, useLanguage } from '../App';
+import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import { Search, Plus, ExternalLink, Filter, Clock, Gamepad2, Check, Star, Trophy, ShoppingCart } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link, useNavigate } from 'react-router-dom';

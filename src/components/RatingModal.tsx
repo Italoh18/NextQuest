@@ -106,24 +106,34 @@ export default function RatingModal({ isOpen, onClose, onSave, gameTitle, initia
   };
 
   const renderCategory = (category: keyof typeof RATING_TEXTS, label: string) => (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <label className="text-xs font-black text-zinc-500 uppercase tracking-widest">{label}</label>
-        <span className="text-lg font-black text-emerald-500">{ratings[category]}</span>
+        <label className="text-lg font-black text-zinc-400 uppercase tracking-widest">{label}</label>
+        <span className="text-3xl font-black text-emerald-500">{ratings[category]}</span>
       </div>
-      <div className="flex gap-1">
+      <div className="flex justify-between gap-1">
         {[...Array(10)].map((_, i) => (
           <button
             key={i}
             type="button"
             onClick={() => setRatings({ ...ratings, [category]: i + 1 })}
-            className={`flex-1 h-2 rounded-full transition-all ${
-              ratings[category] > i ? 'bg-emerald-500' : 'bg-white/5'
-            }`}
-          />
+            className="group relative flex-1 flex justify-center py-2"
+          >
+            <Star 
+              size={36} 
+              className={`transition-all ${
+                ratings[category] > i 
+                  ? 'fill-yellow-400 text-yellow-400 scale-110 drop-shadow-[0_0_8px_rgba(250,204,21,0.4)]' 
+                  : 'text-zinc-700 hover:text-zinc-500'
+              }`} 
+            />
+            <span className="absolute -bottom-1 text-[8px] font-bold text-zinc-600 opacity-0 group-hover:opacity-100 transition-opacity">
+              {i + 1}
+            </span>
+          </button>
         ))}
       </div>
-      <p className="text-[10px] font-bold text-zinc-400 italic min-h-[1.5em]">
+      <p className="text-lg font-bold text-zinc-300 italic min-h-[1.5em] bg-white/5 p-4 rounded-2xl border border-white/5">
         "{RATING_TEXTS[category][ratings[category] - 1]}"
       </p>
     </div>
@@ -144,14 +154,14 @@ export default function RatingModal({ isOpen, onClose, onSave, gameTitle, initia
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="relative w-full max-w-lg bg-zinc-900 border border-white/10 rounded-[40px] p-8 shadow-2xl overflow-hidden"
+            className="relative w-full max-w-2xl bg-zinc-900 border border-white/10 rounded-[40px] p-10 shadow-2xl overflow-hidden"
           >
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 via-blue-500 to-purple-500" />
             
-            <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center justify-between mb-10">
               <div>
-                <h2 className="text-2xl font-black tracking-tighter">AVALIAÇÃO FINAL</h2>
-                <p className="text-zinc-500 text-sm font-bold">{gameTitle}</p>
+                <h2 className="text-3xl font-black tracking-tighter">AVALIAÇÃO FINAL</h2>
+                <p className="text-zinc-400 text-lg font-bold">{gameTitle}</p>
               </div>
               <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-full transition-colors">
                 <X size={24} />

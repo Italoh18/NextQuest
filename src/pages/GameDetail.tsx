@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { Game, UserGame, ChecklistItem } from '../types';
 import { motion } from 'motion/react';
 import { Clock, Trophy, ExternalLink, Play, CheckCircle2, Star, MessageSquare, Plus, Trash2, ArrowLeft, Youtube, ShoppingCart } from 'lucide-react';
-import { useLanguage } from '../App';
+import { useLanguage } from '../context/LanguageContext';
 import RatingModal, { RATING_TEXTS } from '../components/RatingModal';
 
 export default function GameDetail() {

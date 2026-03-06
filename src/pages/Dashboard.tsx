@@ -3,7 +3,7 @@ import { UserGame, GamingPlan } from '../types';
 import { motion } from 'motion/react';
 import { Play, CheckCircle2, Clock, ListTodo, Trophy, TrendingUp, Share2, AlertCircle, Library, Calendar } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { useLanguage } from '../App';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function Dashboard() {
   const { t } = useLanguage();

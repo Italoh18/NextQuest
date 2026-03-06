@@ -6,6 +6,11 @@ CREATE TABLE IF NOT EXISTS users (
     email TEXT UNIQUE NOT NULL,
     password TEXT NOT NULL,
     role TEXT DEFAULT 'user', -- 'admin' or 'user'
+    name TEXT,
+    player_type TEXT,
+    play_days TEXT, -- JSON array of days
+    platforms TEXT, -- JSON array of platforms
+    is_premium INTEGER DEFAULT 0, -- 0 for false, 1 for true
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -82,7 +87,7 @@ CREATE TABLE IF NOT EXISTS plan_games (
 );
 
 -- Initial Admin User (if not exists)
-INSERT OR IGNORE INTO users (email, password, role) VALUES ('admin@nextquest.com', '123456', 'admin');
+INSERT OR IGNORE INTO users (email, password, role, name) VALUES ('admin@nextquest.com', '79913061', 'admin', 'Administrador');
 
 -- Initial Games
 INSERT OR IGNORE INTO games (title, description, cover_url, time_to_beat, time_to_platinum, genre, steam_link) VALUES 

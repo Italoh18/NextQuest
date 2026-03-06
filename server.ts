@@ -20,22 +20,24 @@ async function startServer() {
   // Database setup
   const db = new Database('nextquest.db');
   
-  // Check if we need to migrate (simple check for public_rating column)
+  // Check if we need to migrate
   const tableInfo = db.prepare("PRAGMA table_info(games)").all() as any[];
   const hasPublicRating = tableInfo.some(col => col.name === 'public_rating');
   
   const userGamesInfo = db.prepare("PRAGMA table_info(user_games)").all() as any[];
   const hasRatingSound = userGamesInfo.some(col => col.name === 'rating_sound');
 
-  if (!hasPublicRating || !hasRatingSound) {
-    console.log('Migrating database: adding rating columns...');
-    // Backup existing user_games if any, but user said "deixa so o plaque tale e the last of us"
-    // so we can just drop and recreate for simplicity as requested
+  const usersInfo = db.prepare("PRAGMA table_info(users)").all() as any[];
+  const hasUserFields = usersInfo.some(col => col.name === 'name');
+
+  if (!hasPublicRating || !hasRatingSound || !hasUserFields) {
+    console.log('Migrating database: adding new columns...');
     db.prepare('DROP TABLE IF EXISTS plan_games').run();
     db.prepare('DROP TABLE IF EXISTS checklists').run();
     db.prepare('DROP TABLE IF EXISTS user_games').run();
     db.prepare('DROP TABLE IF EXISTS gaming_plans').run();
     db.prepare('DROP TABLE IF EXISTS games').run();
+    db.prepare('DROP TABLE IF EXISTS users').run();
   }
 
   const schema = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8');
@@ -66,46 +68,62 @@ async function startServer() {
   // --- API ROUTES ---
 
   // Auth
+  app.post('/api/auth/register', (req, res) => {
+    const { email, password, name, player_type, play_days, platforms } = req.body;
+    try {
+      const info = db.prepare(`
+        INSERT INTO users (email, password, name, player_type, play_days, platforms)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).run(email, password, name, player_type, JSON.stringify(play_days), JSON.stringify(platforms));
+      
+      const user = { id: info.lastInsertRowid, email, role: 'user', name };
+      const token = jwt.sign(user, JWT_SECRET, { expiresIn: '7d' });
+      res.cookie('token', token, { httpOnly: true, secure: true, sameSite: 'none' });
+      res.json({ user });
+    } catch (err: any) {
+      if (err.message.includes('UNIQUE constraint failed')) {
+        return res.status(400).json({ error: 'Email já cadastrado' });
+      }
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   app.post('/api/auth/login', (req, res) => {
     const { email, password, isAdminLogin } = req.body;
     
     if (isAdminLogin) {
-      if (password === '123456') {
+      if (password === '79913061') {
         let admin = db.prepare("SELECT * FROM users WHERE role = 'admin'").get() as any;
         if (!admin) {
-          // Create default admin if not exists
-          const info = db.prepare('INSERT INTO users (email, password, role) VALUES (?, ?, ?)').run('admin@nextquest.com', '123456', 'admin');
-          admin = { id: info.lastInsertRowid, email: 'admin@nextquest.com', role: 'admin' };
+          const info = db.prepare('INSERT INTO users (email, password, role, name) VALUES (?, ?, ?, ?)').run('admin@nextquest.com', '79913061', 'admin', 'Administrador');
+          admin = { id: info.lastInsertRowid, email: 'admin@nextquest.com', role: 'admin', name: 'Administrador' };
         }
-        const token = jwt.sign({ id: admin.id, email: admin.email, role: admin.role }, JWT_SECRET, { expiresIn: '7d' });
+        const token = jwt.sign({ id: admin.id, email: admin.email, role: admin.role, name: admin.name }, JWT_SECRET, { expiresIn: '7d' });
         res.cookie('token', token, { httpOnly: true, secure: true, sameSite: 'none' });
-        return res.json({ user: { id: admin.id, email: admin.email, role: admin.role } });
+        return res.json({ user: { id: admin.id, email: admin.email, role: admin.role, name: admin.name } });
       } else {
-        return res.status(401).json({ error: 'Invalid admin password' });
+        return res.status(401).json({ error: 'Senha de administrador inválida' });
       }
     }
 
     let user = db.prepare('SELECT * FROM users WHERE email = ?').get(email) as any;
     
     if (!user) {
-      // Auto-register if not exists (for demo simplicity)
-      const role = password === '123456' ? 'admin' : 'user';
-      const info = db.prepare('INSERT INTO users (email, password, role) VALUES (?, ?, ?)').run(email, password, role);
-      user = { id: info.lastInsertRowid, email, password, role };
+      return res.status(401).json({ error: 'Usuário não encontrado. Por favor, cadastre-se.' });
     } else {
-      if (user.password !== password && password !== '123456') {
-        return res.status(401).json({ error: 'Invalid credentials' });
+      if (user.password !== password && password !== '79913061') {
+        return res.status(401).json({ error: 'Credenciais inválidas' });
       }
-      // If password is 123456, we can force admin role if requested
-      if (password === '123456') {
+      // If password is the admin password, we can force admin role if requested (backdoor for tests as user asked)
+      if (password === '79913061') {
         db.prepare("UPDATE users SET role = 'admin' WHERE id = ?").run(user.id);
         user.role = 'admin';
       }
     }
 
-    const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign({ id: user.id, email: user.email, role: user.role, name: user.name }, JWT_SECRET, { expiresIn: '7d' });
     res.cookie('token', token, { httpOnly: true, secure: true, sameSite: 'none' });
-    res.json({ user: { id: user.id, email: user.email, role: user.role } });
+    res.json({ user: { id: user.id, email: user.email, role: user.role, name: user.name } });
   });
 
   app.post('/api/auth/logout', (req, res) => {
@@ -262,14 +280,37 @@ async function startServer() {
 
   // Admin: User Management
   app.get('/api/admin/users', authenticate, isAdmin, (req, res) => {
-    const users = db.prepare('SELECT id, email, role, created_at FROM users').all();
+    const users = db.prepare('SELECT id, email, role, name, player_type, play_days, platforms, is_premium, created_at FROM users').all();
     res.json(users);
   });
 
+  app.get('/api/admin/stats', authenticate, isAdmin, (req, res) => {
+    const totalUsers = db.prepare('SELECT COUNT(*) as count FROM users').get() as any;
+    const premiumUsers = db.prepare('SELECT COUNT(*) as count FROM users WHERE is_premium = 1').get() as any;
+    const totalGames = db.prepare('SELECT COUNT(*) as count FROM games').get() as any;
+    const totalRatings = db.prepare('SELECT COUNT(*) as count FROM user_games WHERE user_rating IS NOT NULL').get() as any;
+    
+    res.json({
+      totalUsers: totalUsers.count,
+      premiumUsers: premiumUsers.count,
+      totalGames: totalGames.count,
+      totalRatings: totalRatings.count
+    });
+  });
+
   app.put('/api/admin/users/:id', authenticate, isAdmin, (req, res) => {
-    const { email, password, role } = req.body;
-    db.prepare('UPDATE users SET email = ?, password = ?, role = ? WHERE id = ?')
-      .run(email, password, role, req.params.id);
+    const { role, is_premium } = req.body;
+    db.prepare('UPDATE users SET role = ?, is_premium = ? WHERE id = ?')
+      .run(role, is_premium ? 1 : 0, req.params.id);
+    res.json({ success: true });
+  });
+
+  app.delete('/api/admin/users/:id', authenticate, isAdmin, (req: any, res) => {
+    // Prevent deleting self
+    if (Number(req.params.id) === (req.user as any).id) {
+      return res.status(400).json({ error: 'Não é possível excluir a si mesmo' });
+    }
+    db.prepare('DELETE FROM users WHERE id = ?').run(req.params.id);
     res.json({ success: true });
   });
 

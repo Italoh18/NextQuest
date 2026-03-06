@@ -7,65 +7,30 @@ import { Language, translations } from './i18n';
 
 // Pages
 import Login from './pages/Login';
+import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import GameCatalog from './pages/GameCatalog';
 import GameDetail from './pages/GameDetail';
 import PlanningTool from './pages/PlanningTool';
-import AdminPanel from './pages/AdminPanel';
+import AdminDashboard from './pages/AdminDashboard';
 
 // Contexts
-interface AuthContextType {
-  user: User | null;
-  login: (user: User) => void;
-  logout: () => void;
-  loading: boolean;
-}
-
-interface LanguageContextType {
-  language: Language;
-  setLanguage: (lang: Language) => void;
-  t: typeof translations['en'];
-}
-
-const AuthContext = createContext<AuthContextType | null>(null);
-const LanguageContext = createContext<LanguageContextType | null>(null);
-
-export const useAuth = () => useContext(AuthContext)!;
-export const useLanguage = () => useContext(LanguageContext)!;
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { LanguageProvider, useLanguage } from './context/LanguageContext';
 
 export default function App() {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  
-  // Detect browser language or default to 'pt'
-  const [language, setLanguage] = useState<Language>(() => {
-    const saved = localStorage.getItem('language') as Language;
-    if (saved) return saved;
-    const browserLang = navigator.language.split('-')[0];
-    return browserLang === 'pt' ? 'pt' : 'pt'; // Defaulting to PT as requested
-  });
+  return (
+    <LanguageProvider>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </LanguageProvider>
+  );
+}
 
-  useEffect(() => {
-    localStorage.setItem('language', language);
-  }, [language]);
-
-  useEffect(() => {
-    fetch('/api/auth/me')
-      .then(res => res.ok ? res.json() : null)
-      .then(data => {
-        if (data?.user) setUser(data.user);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  }, []);
-
-  const login = (user: User) => setUser(user);
-  const logout = () => {
-    fetch('/api/auth/logout', { method: 'POST' })
-      .then(() => setUser(null));
-  };
-
-  const t = translations[language];
+function AppContent() {
+  const { user, loading } = useAuth();
+  const { t } = useLanguage();
 
   if (loading) return (
     <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
@@ -80,25 +45,22 @@ export default function App() {
   );
 
   return (
-    <LanguageContext.Provider value={{ language, setLanguage, t }}>
-      <AuthContext.Provider value={{ user, login, logout, loading }}>
-        <Router>
-          <div className="min-h-screen bg-[#0a0a0a] text-zinc-100 font-sans selection:bg-emerald-500/30">
-            {user && <Navbar />}
-            <main className={user ? "pt-20 pb-12 px-4 max-w-7xl mx-auto" : ""}>
-              <Routes>
-                <Route path="/login" element={!user ? <Login /> : <Navigate to="/" />} />
-                <Route path="/" element={user ? <Dashboard /> : <Navigate to="/login" />} />
-                <Route path="/catalog" element={user ? <GameCatalog /> : <Navigate to="/login" />} />
-                <Route path="/game/:id" element={user ? <GameDetail /> : <Navigate to="/login" />} />
-                <Route path="/planning" element={user ? <PlanningTool /> : <Navigate to="/login" />} />
-                <Route path="/admin" element={user?.role === 'admin' ? <AdminPanel /> : <Navigate to="/" />} />
-              </Routes>
-            </main>
-          </div>
-        </Router>
-      </AuthContext.Provider>
-    </LanguageContext.Provider>
+    <Router>
+      <div className="min-h-screen bg-[#0a0a0a] text-zinc-100 font-sans selection:bg-emerald-500/30">
+        {user && !window.location.pathname.startsWith('/admin') && <Navbar />}
+        <main className={user && !window.location.pathname.startsWith('/admin') ? "pt-20 pb-12 px-4 max-w-7xl mx-auto" : ""}>
+          <Routes>
+            <Route path="/login" element={!user ? <Login /> : <Navigate to="/" />} />
+            <Route path="/register" element={!user ? <Register /> : <Navigate to="/" />} />
+            <Route path="/" element={user ? <Dashboard /> : <Navigate to="/login" />} />
+            <Route path="/catalog" element={user ? <GameCatalog /> : <Navigate to="/login" />} />
+            <Route path="/game/:id" element={user ? <GameDetail /> : <Navigate to="/login" />} />
+            <Route path="/planning" element={user ? <PlanningTool /> : <Navigate to="/login" />} />
+            <Route path="/admin" element={user?.role === 'admin' ? <AdminDashboard /> : <Navigate to="/" />} />
+          </Routes>
+        </main>
+      </div>
+    </Router>
   );
 }
 

@@ -2,6 +2,12 @@ export interface User {
   id: number;
   email: string;
   role: 'admin' | 'user';
+  name?: string;
+  player_type?: string;
+  play_days?: string; // JSON string or comma separated
+  platforms?: string; // JSON string or comma separated
+  is_premium?: boolean;
+  created_at?: string;
 }
 
 export interface Game {

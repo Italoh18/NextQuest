@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { useAuth, useLanguage } from '../App';
+import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import { Gamepad2, Mail, Lock, ArrowRight } from 'lucide-react';
 import { motion } from 'motion/react';
 
@@ -26,6 +27,11 @@ export default function Login() {
         }),
       });
       
+      if (res.status === 405) {
+        setError('Erro 405: O servidor não permite este método. Verifique se o backend está rodando corretamente.');
+        return;
+      }
+
       const data = await res.json();
       if (res.ok) {
         login(data.user);

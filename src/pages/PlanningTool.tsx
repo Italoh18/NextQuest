@@ -3,7 +3,7 @@ import { Game, UserGame } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { Calendar, Clock, CheckCircle2, Plus, Trash2, ArrowRight, TrendingUp, Info } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useLanguage } from '../App';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function PlanningTool() {
   const navigate = useNavigate();
