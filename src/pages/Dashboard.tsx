@@ -31,9 +31,9 @@ export default function Dashboard() {
       fetch('/api/plans').then(res => res.json()),
       fetch('/api/user/stats').then(res => res.json())
     ]).then(([gamesData, plansData, statsData]) => {
-      setUserGames(gamesData);
-      setPlans(plansData);
-      setStats(statsData);
+      setUserGames(gamesData as UserGame[]);
+      setPlans(plansData as GamingPlan[]);
+      setStats(statsData as UserStats);
       setLoading(false);
     });
   }, []);

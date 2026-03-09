@@ -20,8 +20,8 @@ export default function GameCatalog() {
       fetch('/api/games').then(res => res.json()),
       fetch('/api/user-games').then(res => res.json())
     ]).then(([gamesData, userGamesData]) => {
-      setGames(gamesData);
-      setUserGames(userGamesData);
+      setGames(gamesData as Game[]);
+      setUserGames(userGamesData as UserGame[]);
       setLoading(false);
     });
   }, []);

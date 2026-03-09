@@ -79,7 +79,7 @@ export default function Register() {
         }),
       });
       
-      const data = await res.json();
+      const data = await res.json() as { user?: any, error?: string };
       if (res.ok) {
         login(data.user);
         navigate('/');

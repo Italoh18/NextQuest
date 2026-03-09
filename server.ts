@@ -79,6 +79,41 @@ async function startServer() {
   };
 
   // --- API ROUTES ---
+  
+  // RAWG Proxy
+  app.get('/api/rawg/search', async (req, res) => {
+    const { query, page = 1 } = req.query;
+    const apiKey = process.env.RAWG_API_KEY;
+    
+    if (!apiKey) {
+      return res.status(500).json({ error: 'RAWG API Key not configured' });
+    }
+
+    try {
+      const response = await fetch(`https://api.rawg.io/api/games?key=${apiKey}&search=${query}&page=${page}&page_size=20`);
+      const data = await response.json();
+      res.json(data);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get('/api/rawg/details/:id', async (req, res) => {
+    const { id } = req.params;
+    const apiKey = process.env.RAWG_API_KEY;
+
+    if (!apiKey) {
+      return res.status(500).json({ error: 'RAWG API Key not configured' });
+    }
+
+    try {
+      const response = await fetch(`https://api.rawg.io/api/games/${id}?key=${apiKey}`);
+      const data = await response.json();
+      res.json(data);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
 
   // Auth
   app.post('/api/auth/register', (req, res) => {

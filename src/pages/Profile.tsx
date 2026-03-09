@@ -34,7 +34,7 @@ export default function Profile() {
         setPassword('');
         setConfirmPassword('');
       } else {
-        const data = await res.json();
+        const data = await res.json() as { error?: string };
         setMessage({ type: 'error', text: data.error || 'Erro ao atualizar perfil' });
       }
     } catch (err) {

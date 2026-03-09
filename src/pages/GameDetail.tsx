@@ -26,13 +26,13 @@ export default function GameDetail() {
         fetch(`/api/recommendations/${id}`).then(res => res.json())
       ]);
 
-      const foundGame = gamesRes.find((g: Game) => g.id === Number(id));
-      const foundUserGame = userGamesRes.find((ug: UserGame) => ug.game_id === Number(id));
+      const foundGame = (gamesRes as Game[]).find((g: Game) => g.id === Number(id));
+      const foundUserGame = (userGamesRes as UserGame[]).find((ug: UserGame) => ug.game_id === Number(id));
 
-      setGame(foundGame);
-      setUserGame(foundUserGame);
-      setChecklist(checklistRes);
-      setRecommendations(recsRes);
+      setGame(foundGame || null);
+      setUserGame(foundUserGame || null);
+      setChecklist(checklistRes as ChecklistItem[]);
+      setRecommendations(recsRes as any[]);
       setLoading(false);
     };
     fetchData();

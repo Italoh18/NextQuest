@@ -7,6 +7,7 @@ import { cors } from 'hono/cors';
 type Env = {
   db: D1Database;
   JWT_SECRET: string;
+  RAWG_API_KEY: string;
 };
 
 type Variables = {
@@ -47,6 +48,42 @@ const isAdmin = async (c: any, next: any) => {
 };
 
 // --- API ROUTES ---
+
+// RAWG Proxy
+app.get('/rawg/search', async (c) => {
+  const query = c.req.query('query');
+  const page = c.req.query('page') || '1';
+  const apiKey = c.env.RAWG_API_KEY;
+  
+  if (!apiKey) {
+    return c.json({ error: 'RAWG API Key not configured' }, 500);
+  }
+
+  try {
+    const response = await fetch(`https://api.rawg.io/api/games?key=${apiKey}&search=${query}&page=${page}&page_size=20`);
+    const data = await response.json();
+    return c.json(data);
+  } catch (err: any) {
+    return c.json({ error: err.message }, 500);
+  }
+});
+
+app.get('/rawg/details/:id', async (c) => {
+  const id = c.req.param('id');
+  const apiKey = c.env.RAWG_API_KEY;
+
+  if (!apiKey) {
+    return c.json({ error: 'RAWG API Key not configured' }, 500);
+  }
+
+  try {
+    const response = await fetch(`https://api.rawg.io/api/games/${id}?key=${apiKey}`);
+    const data = await response.json();
+    return c.json(data);
+  } catch (err: any) {
+    return c.json({ error: err.message }, 500);
+  }
+});
 
 // Health check
 app.get('/health', (c) => {

@@ -19,7 +19,8 @@ export default function PlanningTool() {
     fetch('/api/user-games')
       .then(res => res.json())
       .then(data => {
-        setUserGames(data.filter((ug: UserGame) => ug.status !== 'completed' && ug.status !== 'platinum'));
+        const games = data as UserGame[];
+        setUserGames(games.filter((ug: UserGame) => ug.status !== 'completed' && ug.status !== 'platinum'));
         setLoading(false);
       });
   }, []);
