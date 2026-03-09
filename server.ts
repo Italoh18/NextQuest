@@ -15,10 +15,11 @@ const JWT_SECRET = process.env.JWT_SECRET || 'next-quest-secret-key';
 const PORT = 3000;
 
 async function startServer() {
-  const app = express();
-  
-  // Database setup
-  const db = new Database('nextquest.db');
+  try {
+    const app = express();
+    
+    // Database setup
+    const db = new Database('nextquest.db');
   
   // Check if we need to migrate
   const tableInfo = db.prepare("PRAGMA table_info(games)").all() as any[];
@@ -50,8 +51,13 @@ async function startServer() {
 
   // Request logging
   app.use((req, res, next) => {
-    console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
     next();
+  });
+
+  // Health check
+  app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok', time: new Date().toISOString() });
   });
 
   // Auth Middleware
@@ -378,6 +384,10 @@ async function startServer() {
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`NextQuest Server running at http://localhost:${PORT}`);
   });
+  } catch (err) {
+    console.error('Failed to start server:', err);
+    process.exit(1);
+  }
 }
 
 startServer();
