@@ -31,10 +31,18 @@ export default function RAWGSearch() {
     setLoading(true);
     try {
       const res = await fetch(`/api/rawg/search?query=${encodeURIComponent(query)}`);
-      const data = await res.json() as { results: RAWGGame[] };
+      const data = await res.json() as { results?: RAWGGame[], error?: string };
+      
+      if (!res.ok) {
+        const errorData = data as { error?: string, detail?: string };
+        alert(errorData.error || errorData.detail || 'Erro ao buscar jogos no RAWG');
+        return;
+      }
+      
       setResults(data.results || []);
     } catch (err) {
       console.error('Error searching RAWG:', err);
+      alert('Erro de conexão ao buscar jogos');
     } finally {
       setLoading(false);
     }
@@ -69,8 +77,8 @@ export default function RAWGSearch() {
       if (res.ok) {
         alert('Jogo adicionado com sucesso ao catálogo!');
       } else {
-        const err = await res.json() as { error?: string };
-        alert(err.error || 'Erro ao adicionar jogo');
+        const err = await res.json() as { error?: string, detail?: string };
+        alert(err.error || err.detail || 'Erro ao adicionar jogo');
       }
     } catch (err) {
       console.error('Error adding game:', err);

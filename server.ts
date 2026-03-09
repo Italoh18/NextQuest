@@ -92,7 +92,7 @@ async function startServer() {
     try {
       const response = await fetch(`https://api.rawg.io/api/games?key=${apiKey}&search=${query}&page=${page}&page_size=20`);
       const data = await response.json();
-      res.json(data);
+      res.status(response.status).json(data);
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
@@ -109,7 +109,7 @@ async function startServer() {
     try {
       const response = await fetch(`https://api.rawg.io/api/games/${id}?key=${apiKey}`);
       const data = await response.json();
-      res.json(data);
+      res.status(response.status).json(data);
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }

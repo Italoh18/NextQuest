@@ -62,7 +62,7 @@ app.get('/rawg/search', async (c) => {
   try {
     const response = await fetch(`https://api.rawg.io/api/games?key=${apiKey}&search=${query}&page=${page}&page_size=20`);
     const data = await response.json();
-    return c.json(data);
+    return c.json(data, response.status as any);
   } catch (err: any) {
     return c.json({ error: err.message }, 500);
   }
@@ -79,7 +79,7 @@ app.get('/rawg/details/:id', async (c) => {
   try {
     const response = await fetch(`https://api.rawg.io/api/games/${id}?key=${apiKey}`);
     const data = await response.json();
-    return c.json(data);
+    return c.json(data, response.status as any);
   } catch (err: any) {
     return c.json({ error: err.message }, 500);
   }
