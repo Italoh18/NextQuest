@@ -24,13 +24,24 @@ export default function RAWGSearch() {
   const [loading, setLoading] = useState(false);
   const [adding, setAdding] = useState<number | null>(null);
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!query.trim()) return;
+  React.useEffect(() => {
+    console.log('RAWGSearch component mounted');
+  }, []);
+
+  const handleSearch = async (e?: React.FormEvent | React.MouseEvent | React.KeyboardEvent) => {
+    if (e && e.preventDefault) e.preventDefault();
+    alert('Busca iniciada para: ' + query);
+    console.log('Search triggered with query:', query);
+    if (!query.trim()) {
+      alert('Por favor, digite algo para buscar');
+      return;
+    }
 
     setLoading(true);
     try {
+      console.log('Fetching from API...');
       const res = await fetch(`/api/rawg/search?query=${encodeURIComponent(query)}`);
+      console.log('API Response status:', res.status);
       const data = await res.json() as { results?: RAWGGame[], error?: string };
       
       if (!res.ok) {
@@ -88,25 +99,32 @@ export default function RAWGSearch() {
     }
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSearch(e as any);
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <form onSubmit={handleSearch} className="relative">
+      <div className="relative">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" size={20} />
         <input 
           type="text" 
           placeholder="Pesquisar no banco de dados global (RAWG)..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all"
+          onKeyDown={handleKeyDown}
+          className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-24 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all"
         />
         <button 
-          type="submit"
+          onClick={handleSearch}
           disabled={loading}
-          className="absolute right-2 top-1/2 -translate-y-1/2 bg-emerald-500 hover:bg-emerald-400 text-black px-4 py-2 rounded-xl font-bold text-sm transition-all disabled:opacity-50"
+          className="absolute right-2 top-1/2 -translate-y-1/2 bg-emerald-500 hover:bg-emerald-400 text-black px-4 py-2 rounded-xl font-bold text-sm transition-all disabled:opacity-50 z-10"
         >
           {loading ? <Loader2 className="animate-spin" size={18} /> : 'Buscar'}
         </button>
-      </form>
+      </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <AnimatePresence mode="popLayout">
