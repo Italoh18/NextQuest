@@ -85,7 +85,11 @@ async function startServer() {
     const { query, page = 1 } = req.query;
     const apiKey = process.env.RAWG_API_KEY;
     
+    console.log(`[RAWG Proxy] Searching for: "${query}", Page: ${page}`);
+    console.log(`[RAWG Proxy] API Key configured: ${!!apiKey}`);
+
     if (!apiKey) {
+      console.error('[RAWG Proxy] Error: RAWG_API_KEY is missing');
       return res.status(500).json({ error: 'RAWG API Key not configured' });
     }
 
@@ -122,7 +126,14 @@ async function startServer() {
       const info = db.prepare(`
         INSERT INTO users (email, password, name, player_type, play_days, platforms)
         VALUES (?, ?, ?, ?, ?, ?)
-      `).run(email, password, name, player_type, JSON.stringify(play_days), JSON.stringify(platforms));
+      `).run(
+        email, 
+        password, 
+        name || null, 
+        player_type || null, 
+        JSON.stringify(play_days || []), 
+        JSON.stringify(platforms || [])
+      );
       
       const user = { id: info.lastInsertRowid, email, role: 'user', name };
       const token = jwt.sign(user, JWT_SECRET, { expiresIn: '7d' });
@@ -187,9 +198,9 @@ async function startServer() {
   app.put('/api/user/profile', authenticate, (req: any, res) => {
     const { name, password } = req.body;
     if (password) {
-      db.prepare('UPDATE users SET name = ?, password = ? WHERE id = ?').run(name, password, req.user.id);
+      db.prepare('UPDATE users SET name = ?, password = ? WHERE id = ?').run(name || 'Usuário', password, req.user.id);
     } else {
-      db.prepare('UPDATE users SET name = ? WHERE id = ?').run(name, req.user.id);
+      db.prepare('UPDATE users SET name = ? WHERE id = ?').run(name || 'Usuário', req.user.id);
     }
     res.json({ success: true });
   });
@@ -197,7 +208,7 @@ async function startServer() {
   app.put('/api/user/preferences', authenticate, (req: any, res) => {
     const { play_days, hours_per_day } = req.body;
     db.prepare('UPDATE users SET play_days = ?, hours_per_day = ? WHERE id = ?')
-      .run(JSON.stringify(play_days), hours_per_day, req.user.id);
+      .run(JSON.stringify(play_days || []), hours_per_day || 0, req.user.id);
     res.json({ success: true });
   });
 
@@ -230,28 +241,65 @@ async function startServer() {
   });
 
   app.post('/api/games', authenticate, isAdmin, (req, res) => {
-    const { title, description, cover_url, steam_link, epic_link, gog_link, time_to_beat, time_to_platinum, review_video_url, genre, public_rating } = req.body;
+    const { 
+      id, title, description, cover_url, steam_link, epic_link, gog_link, 
+      time_to_beat, time_to_platinum, review_video_url, genre, public_rating, slug 
+    } = req.body;
+    
     try {
       const info = db.prepare(`
-        INSERT INTO games (title, description, cover_url, steam_link, epic_link, gog_link, time_to_beat, time_to_platinum, review_video_url, genre, public_rating)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).run(title, description, cover_url, steam_link, epic_link, gog_link, time_to_beat, time_to_platinum, review_video_url, genre, public_rating || 0);
+        INSERT INTO games (id, title, description, cover_url, steam_link, epic_link, gog_link, time_to_beat, time_to_platinum, review_video_url, genre, public_rating, slug)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        id || null, 
+        title, 
+        description || null, 
+        cover_url || null, 
+        steam_link || null, 
+        epic_link || null, 
+        gog_link || null, 
+        time_to_beat || 0, 
+        time_to_platinum || 0, 
+        review_video_url || null, 
+        genre || null, 
+        public_rating || 0,
+        slug || null
+      );
       res.json({ id: info.lastInsertRowid });
     } catch (err: any) {
       if (err.message.includes('UNIQUE constraint failed')) {
-        return res.status(400).json({ error: 'Game already exists' });
+        return res.status(400).json({ error: 'Este jogo já existe no catálogo.' });
       }
+      console.error('Error inserting game:', err);
       res.status(500).json({ error: err.message });
     }
   });
 
   app.put('/api/games/:id', authenticate, isAdmin, (req, res) => {
-    const { title, description, cover_url, steam_link, epic_link, gog_link, time_to_beat, time_to_platinum, review_video_url, genre, public_rating } = req.body;
+    const { 
+      title, description, cover_url, steam_link, epic_link, gog_link, 
+      time_to_beat, time_to_platinum, review_video_url, genre, public_rating, slug 
+    } = req.body;
+    
     db.prepare(`
       UPDATE games SET title = ?, description = ?, cover_url = ?, steam_link = ?, epic_link = ?, gog_link = ?, 
-      time_to_beat = ?, time_to_platinum = ?, review_video_url = ?, genre = ?, public_rating = ?
+      time_to_beat = ?, time_to_platinum = ?, review_video_url = ?, genre = ?, public_rating = ?, slug = ?
       WHERE id = ?
-    `).run(title, description, cover_url, steam_link, epic_link, gog_link, time_to_beat, time_to_platinum, review_video_url, genre, public_rating, req.params.id);
+    `).run(
+      title, 
+      description || null, 
+      cover_url || null, 
+      steam_link || null, 
+      epic_link || null, 
+      gog_link || null, 
+      time_to_beat || 0, 
+      time_to_platinum || 0, 
+      review_video_url || null, 
+      genre || null, 
+      public_rating || 0, 
+      slug || null,
+      req.params.id
+    );
     res.json({ success: true });
   });
 
@@ -273,8 +321,10 @@ async function startServer() {
 
   app.post('/api/user-games', authenticate, (req: any, res) => {
     const { game_id, status } = req.body;
+    if (!game_id) return res.status(400).json({ error: 'ID do jogo é obrigatório' });
+
     const existing = db.prepare('SELECT id FROM user_games WHERE user_id = ? AND game_id = ?').get(req.user.id, game_id);
-    if (existing) return res.status(400).json({ error: 'Game already in backlog' });
+    if (existing) return res.status(400).json({ error: 'Este jogo já está na sua biblioteca' });
     
     db.prepare('INSERT INTO user_games (user_id, game_id, status) VALUES (?, ?, ?)').run(req.user.id, game_id, status || 'backlog');
     res.json({ success: true });
@@ -289,7 +339,21 @@ async function startServer() {
       rating_sound = ?, rating_graphics = ?, rating_gameplay = ?, rating_story = ?, rating_general = ?,
       user_comment = ?, recommend_next_game_id = ?, completed_at = COALESCE(?, completed_at)
       WHERE id = ? AND user_id = ?
-    `).run(status, hours_played, user_rating, rating_sound, rating_graphics, rating_gameplay, rating_story, rating_general, user_comment, recommend_next_game_id, completed_at, req.params.id, req.user.id);
+    `).run(
+      status || 'backlog', 
+      hours_played || 0, 
+      user_rating || null, 
+      rating_sound || null, 
+      rating_graphics || null, 
+      rating_gameplay || null, 
+      rating_story || null, 
+      rating_general || null, 
+      user_comment || null, 
+      recommend_next_game_id || null, 
+      completed_at, 
+      req.params.id, 
+      req.user.id
+    );
 
     // Update public rating for the game
     const ug = db.prepare('SELECT game_id FROM user_games WHERE id = ?').get(req.params.id) as any;
@@ -326,6 +390,7 @@ async function startServer() {
 
   app.post('/api/checklists', authenticate, (req: any, res) => {
     const { game_id, task } = req.body;
+    if (!game_id || !task) return res.status(400).json({ error: 'Dados incompletos' });
     db.prepare('INSERT INTO checklists (user_id, game_id, task) VALUES (?, ?, ?)').run(req.user.id, game_id, task);
     res.json({ success: true });
   });
@@ -344,20 +409,21 @@ async function startServer() {
 
   app.post('/api/plans', authenticate, (req: any, res) => {
     const { title, target_weeks, days_of_week, game_ids } = req.body;
+    if (!title || !game_ids || game_ids.length === 0) return res.status(400).json({ error: 'Dados incompletos' });
     
     // Calculate hours per day
     let totalHours = 0;
     const selectedGames = db.prepare(`SELECT time_to_beat FROM games WHERE id IN (${game_ids.join(',')})`).all() as any[];
     selectedGames.forEach(g => totalHours += (g.time_to_beat || 0));
     
-    const daysCount = JSON.parse(days_of_week).length;
-    const totalDays = target_weeks * daysCount;
+    const daysCount = JSON.parse(days_of_week || '[]').length;
+    const totalDays = (target_weeks || 1) * daysCount;
     const hoursPerDay = totalDays > 0 ? totalHours / totalDays : 0;
 
     const info = db.prepare(`
       INSERT INTO gaming_plans (user_id, title, target_weeks, days_of_week, hours_per_day)
       VALUES (?, ?, ?, ?, ?)
-    `).run(req.user.id, title, target_weeks, days_of_week, hoursPerDay);
+    `).run(req.user.id, title, target_weeks || 1, days_of_week || '[]', hoursPerDay);
     
     const planId = info.lastInsertRowid;
     const insertPlanGame = db.prepare('INSERT INTO plan_games (plan_id, game_id) VALUES (?, ?)');

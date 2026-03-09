@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Game, UserGame } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
-import { Search, Plus, ExternalLink, Filter, Clock, Gamepad2, Check, Star, Trophy, ShoppingCart } from 'lucide-react';
+import { Search, Plus, ExternalLink, Filter, Clock, Gamepad2, Check, Star, Trophy, ShoppingCart, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link, useNavigate } from 'react-router-dom';
 
@@ -14,14 +14,26 @@ export default function GameCatalog() {
   const [userGames, setUserGames] = useState<UserGame[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    setLoading(true);
     Promise.all([
-      fetch('/api/games').then(res => res.json()),
-      fetch('/api/user-games').then(res => res.json())
+      fetch('/api/games').then(res => {
+        if (!res.ok) throw new Error('Failed to fetch games');
+        return res.json();
+      }),
+      fetch('/api/user-games').then(res => {
+        if (!res.ok) throw new Error('Failed to fetch user games');
+        return res.json();
+      })
     ]).then(([gamesData, userGamesData]) => {
       setGames(gamesData as Game[]);
       setUserGames(userGamesData as UserGame[]);
+      setLoading(false);
+    }).catch(err => {
+      console.error('Error loading catalog:', err);
+      setError('Erro ao carregar o catálogo. Tente novamente mais tarde.');
       setLoading(false);
     });
   }, []);
@@ -53,103 +65,143 @@ export default function GameCatalog() {
         </div>
         
         <div className="flex items-center gap-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={18} />
+          <div className="relative group">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-emerald-500 transition-colors" size={18} />
             <input 
               type="text" 
               placeholder={t.searchGames}
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="bg-zinc-900 border border-white/5 rounded-xl py-2.5 pl-10 pr-4 focus:outline-none focus:border-emerald-500/50 w-64 text-sm"
+              onChange={(e) => {
+                console.log('Catalog search query changed:', e.target.value);
+                setSearch(e.target.value);
+              }}
+              className="bg-zinc-900 border border-white/5 rounded-xl py-2.5 pl-10 pr-10 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20 w-64 text-sm transition-all"
             />
+            {search && (
+              <button 
+                onClick={() => setSearch('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors"
+              >
+                <X size={14} />
+              </button>
+            )}
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {filteredGames.map(game => (
-          <motion.div 
-            layout
-            key={game.id}
-            className="group bg-zinc-900/50 border border-white/5 rounded-3xl overflow-hidden hover:border-emerald-500/30 transition-all flex flex-col h-full"
-          >
-            <Link to={`/game/${game.id}`} className="relative aspect-[16/9] overflow-hidden">
-              <img 
-                src={game.cover_url} 
-                alt={game.title} 
-                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                referrerPolicy="no-referrer"
-              />
-              <div className="absolute top-4 right-4 px-2 py-1 bg-black/60 backdrop-blur-md rounded-lg flex items-center gap-1 text-yellow-500">
-                <Star size={12} fill="currentColor" />
-                <span className="text-[10px] font-black">{game.public_rating || 0}</span>
-              </div>
-            </Link>
-            
-            <div className="p-5 flex-1 flex flex-col">
-              <div className="mb-4">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">{game.genre}</span>
-                </div>
-                <h3 className="font-black text-lg line-clamp-1 mb-2">{game.title}</h3>
-                <p className="text-xs text-zinc-500 line-clamp-2 leading-relaxed">{game.description}</p>
-              </div>
+      {error && (
+        <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-2xl text-sm text-center">
+          {error}
+        </div>
+      )}
 
-              <div className="grid grid-cols-2 gap-3 mb-4">
-                <div className="bg-black/40 rounded-2xl p-3 border border-white/5">
-                  <div className="text-[8px] font-black text-zinc-500 uppercase tracking-widest mb-1">{t.mainStory}</div>
-                  <div className="flex items-center gap-1.5">
-                    <Clock size={12} className="text-blue-400" />
-                    <span className="text-xs font-bold">{game.time_to_beat}h</span>
-                  </div>
+      {loading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
+            <div key={i} className="bg-zinc-900/50 border border-white/5 rounded-3xl aspect-[3/4] animate-pulse" />
+          ))}
+        </div>
+      ) : filteredGames.length > 0 ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {filteredGames.map(game => (
+            <motion.div 
+              layout
+              key={game.id}
+              className="group bg-zinc-900/50 border border-white/5 rounded-3xl overflow-hidden hover:border-emerald-500/30 transition-all flex flex-col h-full"
+            >
+              <Link to={`/game/${game.id}`} className="relative aspect-[16/9] overflow-hidden">
+                <img 
+                  src={game.cover_url} 
+                  alt={game.title} 
+                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                  referrerPolicy="no-referrer"
+                />
+                <div className="absolute top-4 right-4 px-2 py-1 bg-black/60 backdrop-blur-md rounded-lg flex items-center gap-1 text-yellow-500">
+                  <Star size={12} fill="currentColor" />
+                  <span className="text-[10px] font-black">{game.public_rating || 0}</span>
                 </div>
-                <div className="bg-black/40 rounded-2xl p-3 border border-white/5">
-                  <div className="text-[8px] font-black text-zinc-500 uppercase tracking-widest mb-1">{t.platinum}</div>
-                  <div className="flex items-center gap-1.5">
-                    <Trophy size={12} className="text-yellow-500" />
-                    <span className="text-xs font-bold">{game.time_to_platinum}h</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap gap-2 mb-6">
-                {game.steam_link && (
-                  <a href={game.steam_link} target="_blank" rel="noopener noreferrer" className="p-2 bg-[#171a21] hover:bg-[#2a475e] rounded-lg text-white transition-colors" title="Steam">
-                    <ShoppingCart size={14} />
-                  </a>
-                )}
-                {game.epic_link && (
-                  <a href={game.epic_link} target="_blank" rel="noopener noreferrer" className="p-2 bg-[#2a2a2a] hover:bg-[#3a3a3a] rounded-lg text-white transition-colors" title="Epic">
-                    <ShoppingCart size={14} />
-                  </a>
-                )}
-                {game.gog_link && (
-                  <a href={game.gog_link} target="_blank" rel="noopener noreferrer" className="p-2 bg-[#4d2d5e] hover:bg-[#6d3d7e] rounded-lg text-white transition-colors" title="GOG">
-                    <ShoppingCart size={14} />
-                  </a>
-                )}
-              </div>
+              </Link>
               
-              <div className="mt-auto">
-                {isGameInBacklog(game.id) ? (
-                  <div className="w-full bg-emerald-500/10 text-emerald-500 py-3 rounded-2xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2">
-                    <Check size={16} />
-                    {t.inBacklog}
+              <div className="p-5 flex-1 flex flex-col">
+                <div className="mb-4">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">{game.genre}</span>
                   </div>
-                ) : (
-                  <button 
-                    onClick={() => addToBacklog(game.id)}
-                    className="w-full bg-emerald-500 hover:bg-emerald-400 text-black py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 active:scale-95 shadow-lg shadow-emerald-500/20"
-                  >
-                    <Plus size={16} />
-                    {t.addToBacklog}
-                  </button>
-                )}
+                  <h3 className="font-black text-lg line-clamp-1 mb-2">{game.title}</h3>
+                  <p className="text-xs text-zinc-500 line-clamp-2 leading-relaxed">{game.description}</p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  <div className="bg-black/40 rounded-2xl p-3 border border-white/5">
+                    <div className="text-[8px] font-black text-zinc-500 uppercase tracking-widest mb-1">{t.mainStory}</div>
+                    <div className="flex items-center gap-1.5">
+                      <Clock size={12} className="text-blue-400" />
+                      <span className="text-xs font-bold">{game.time_to_beat}h</span>
+                    </div>
+                  </div>
+                  <div className="bg-black/40 rounded-2xl p-3 border border-white/5">
+                    <div className="text-[8px] font-black text-zinc-500 uppercase tracking-widest mb-1">{t.platinum}</div>
+                    <div className="flex items-center gap-1.5">
+                      <Trophy size={12} className="text-yellow-500" />
+                      <span className="text-xs font-bold">{game.time_to_platinum}h</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-2 mb-6">
+                  {game.steam_link && (
+                    <a href={game.steam_link} target="_blank" rel="noopener noreferrer" className="p-2 bg-[#171a21] hover:bg-[#2a475e] rounded-lg text-white transition-colors" title="Steam">
+                      <ShoppingCart size={14} />
+                    </a>
+                  )}
+                  {game.epic_link && (
+                    <a href={game.epic_link} target="_blank" rel="noopener noreferrer" className="p-2 bg-[#2a2a2a] hover:bg-[#3a3a3a] rounded-lg text-white transition-colors" title="Epic">
+                      <ShoppingCart size={14} />
+                    </a>
+                  )}
+                  {game.gog_link && (
+                    <a href={game.gog_link} target="_blank" rel="noopener noreferrer" className="p-2 bg-[#4d2d5e] hover:bg-[#6d3d7e] rounded-lg text-white transition-colors" title="GOG">
+                      <ShoppingCart size={14} />
+                    </a>
+                  )}
+                </div>
+                
+                <div className="mt-auto">
+                  {isGameInBacklog(game.id) ? (
+                    <div className="w-full bg-emerald-500/10 text-emerald-500 py-3 rounded-2xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2">
+                      <Check size={16} />
+                      {t.inBacklog}
+                    </div>
+                  ) : (
+                    <button 
+                      onClick={() => addToBacklog(game.id)}
+                      className="w-full bg-emerald-500 hover:bg-emerald-400 text-black py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 active:scale-95 shadow-lg shadow-emerald-500/20"
+                    >
+                      <Plus size={16} />
+                      {t.addToBacklog}
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
-          </motion.div>
-        ))}
-      </div>
+            </motion.div>
+          ))}
+        </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <div className="p-6 bg-zinc-900/50 rounded-full mb-4">
+            <Search size={48} className="text-zinc-700" />
+          </div>
+          <h3 className="text-xl font-bold mb-2">Nenhum jogo encontrado</h3>
+          <p className="text-zinc-500 max-w-md">
+            Não encontramos nenhum jogo que corresponda a "{search}" no nosso catálogo local.
+            {user?.role === 'admin' && (
+              <Link to="/admin" className="text-emerald-500 hover:underline mt-4 block font-bold">
+                Ir para o Painel Admin para adicionar novos jogos
+              </Link>
+            )}
+          </p>
+        </div>
+      )}
     </div>
   );
 }

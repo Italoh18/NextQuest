@@ -33,10 +33,12 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [gameSearchTerm, setGameSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState<'all' | 'admin' | 'user'>('all');
   const [filterPremium, setFilterPremium] = useState<'all' | 'premium' | 'free'>('all');
   
-  const [activeTab, setActiveTab] = useState<'users' | 'rawg'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'catalog' | 'rawg'>('users');
+  const [localGames, setLocalGames] = useState<any[]>([]);
   
   const { logout, user: currentUser } = useAuth();
   const navigate = useNavigate();
@@ -57,6 +59,12 @@ export default function AdminDashboard() {
         const statsData = await statsRes.json() as Stats;
         setUsers(usersData);
         setStats(statsData);
+      }
+
+      const gamesRes = await fetch('/api/games');
+      if (gamesRes.ok) {
+        const gamesData = await gamesRes.json() as any[];
+        setLocalGames(gamesData);
       }
     } catch (err) {
       console.error('Error fetching admin data:', err);
@@ -94,6 +102,18 @@ export default function AdminDashboard() {
       }
     } catch (err) {
       console.error('Error deleting user:', err);
+    }
+  };
+
+  const handleDeleteGame = async (gameId: number) => {
+    if (!confirm('Tem certeza que deseja remover este jogo do catálogo?')) return;
+    try {
+      const res = await fetch(`/api/games/${gameId}`, { method: 'DELETE' });
+      if (res.ok) {
+        fetchData();
+      }
+    } catch (err) {
+      console.error('Error deleting game:', err);
     }
   };
 
@@ -183,6 +203,16 @@ export default function AdminDashboard() {
             }`}
           >
             Usuários
+          </button>
+          <button 
+            onClick={() => setActiveTab('catalog')}
+            className={`px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all ${
+              activeTab === 'catalog' 
+                ? 'bg-emerald-500 text-black shadow-lg shadow-emerald-500/20' 
+                : 'bg-white/5 text-zinc-500 hover:bg-white/10'
+            }`}
+          >
+            Catálogo
           </button>
           <button 
             onClick={() => setActiveTab('rawg')}
@@ -325,6 +355,71 @@ export default function AdminDashboard() {
                   <p className="text-zinc-500 font-bold">Nenhum usuário encontrado com estes filtros.</p>
                 </div>
               )}
+            </div>
+          </div>
+        ) : activeTab === 'catalog' ? (
+          <div className="bg-zinc-900/50 border border-white/5 rounded-3xl overflow-hidden">
+            <div className="p-8 border-b border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div>
+                <h2 className="text-2xl font-black text-white tracking-tight mb-1">Catálogo Local</h2>
+                <p className="text-sm text-zinc-500">Gerencie os jogos que já estão no banco de dados.</p>
+              </div>
+
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" size={18} />
+                <input 
+                  type="text" 
+                  placeholder="Buscar no catálogo local..."
+                  value={gameSearchTerm}
+                  onChange={(e) => setGameSearchTerm(e.target.value)}
+                  className="bg-white/5 border border-white/10 rounded-2xl py-2.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all w-64"
+                />
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-white/[0.02]">
+                    <th className="px-8 py-4 text-[10px] font-black text-zinc-500 uppercase tracking-widest">Jogo</th>
+                    <th className="px-8 py-4 text-[10px] font-black text-zinc-500 uppercase tracking-widest">Gênero</th>
+                    <th className="px-8 py-4 text-[10px] font-black text-zinc-500 uppercase tracking-widest">Tempo</th>
+                    <th className="px-8 py-4 text-[10px] font-black text-zinc-500 uppercase tracking-widest text-right">Ações</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {localGames.filter(g => g.title.toLowerCase().includes(gameSearchTerm.toLowerCase())).map((g) => (
+                    <tr key={g.id} className="hover:bg-white/[0.01] transition-colors group">
+                      <td className="px-8 py-6">
+                        <div className="flex items-center gap-4">
+                          <img src={g.cover_url} alt="" className="w-12 h-16 object-cover rounded-lg border border-white/10" referrerPolicy="no-referrer" />
+                          <div>
+                            <p className="text-sm font-bold text-white">{g.title}</p>
+                            <p className="text-[10px] text-zinc-500 line-clamp-1 max-w-xs">{g.description}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-8 py-6">
+                        <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">{g.genre}</span>
+                      </td>
+                      <td className="px-8 py-6">
+                        <div className="text-[10px] text-zinc-400">
+                          <p>Zerar: {g.time_to_beat}h</p>
+                          <p>Platina: {g.time_to_platinum}h</p>
+                        </div>
+                      </td>
+                      <td className="px-8 py-6 text-right">
+                        <button 
+                          onClick={() => handleDeleteGame(g.id)}
+                          className="p-2 text-red-500 hover:bg-red-500/10 rounded-xl transition-all opacity-0 group-hover:opacity-100"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         ) : (

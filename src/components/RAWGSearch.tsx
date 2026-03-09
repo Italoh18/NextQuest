@@ -30,30 +30,36 @@ export default function RAWGSearch() {
 
   const handleSearch = async (e?: React.FormEvent | React.MouseEvent | React.KeyboardEvent) => {
     if (e && e.preventDefault) e.preventDefault();
-    alert('Busca iniciada para: ' + query);
-    console.log('Search triggered with query:', query);
+    console.log('--- RAWG Search Triggered ---');
+    console.log('Query:', query);
+    
     if (!query.trim()) {
-      alert('Por favor, digite algo para buscar');
+      alert('Por favor, digite o nome de um jogo.');
       return;
     }
 
     setLoading(true);
+    setResults([]);
+    
     try {
-      console.log('Fetching from API...');
-      const res = await fetch(`/api/rawg/search?query=${encodeURIComponent(query)}`);
-      console.log('API Response status:', res.status);
-      const data = await res.json() as { results?: RAWGGame[], error?: string };
+      console.log('Fetching from /api/rawg/search...');
+      const response = await fetch(`/api/rawg/search?query=${encodeURIComponent(query)}`);
+      console.log('Response status:', response.status);
       
-      if (!res.ok) {
-        const errorData = data as { error?: string, detail?: string };
-        alert(errorData.error || errorData.detail || 'Erro ao buscar jogos no RAWG');
-        return;
+      const data = await response.json() as { results?: RAWGGame[], error?: string, detail?: string };
+      console.log('Response data:', data);
+
+      if (!response.ok) {
+        throw new Error(data.error || data.detail || 'Erro na busca');
       }
-      
+
       setResults(data.results || []);
-    } catch (err) {
-      console.error('Error searching RAWG:', err);
-      alert('Erro de conexão ao buscar jogos');
+      if (data.results?.length === 0) {
+        alert('Nenhum jogo encontrado no RAWG.');
+      }
+    } catch (err: any) {
+      console.error('RAWG Search Error:', err);
+      alert(`Erro na busca: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -68,14 +74,15 @@ export default function RAWGSearch() {
 
       // 2. Prepare data for our DB
       const gameData = {
-        title: detail.name,
-        description: detail.description_raw?.substring(0, 500) + '...',
-        cover_url: detail.background_image,
+        id: rawgId,
+        title: detail.name || 'Sem título',
+        description: (detail.description_raw || 'Sem descrição').substring(0, 500) + '...',
+        cover_url: detail.background_image || '',
         genre: detail.genres?.[0]?.name || 'Ação',
         time_to_beat: detail.playtime || 15,
         time_to_platinum: Math.round((detail.playtime || 15) * 2.5),
-        public_rating: detail.rating,
-        slug: detail.slug
+        public_rating: 0, // Reset rating as requested by user
+        slug: detail.slug || ''
       };
 
       // 3. Save to our DB
