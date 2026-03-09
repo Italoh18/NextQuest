@@ -35,8 +35,6 @@ CREATE TABLE IF NOT EXISTS games (
 
 CREATE INDEX IF NOT EXISTS idx_games_title ON games(title);
 CREATE INDEX IF NOT EXISTS idx_games_slug ON games(slug);
-CREATE INDEX IF NOT EXISTS idx_user_games_user ON user_games(user_id);
-CREATE INDEX IF NOT EXISTS idx_user_games_game ON user_games(game_id);
 
 -- User Games (Tracking/Backlog)
 CREATE TABLE IF NOT EXISTS user_games (
@@ -60,6 +58,9 @@ CREATE TABLE IF NOT EXISTS user_games (
     FOREIGN KEY (game_id) REFERENCES games(id),
     FOREIGN KEY (recommend_next_game_id) REFERENCES games(id)
 );
+
+CREATE INDEX IF NOT EXISTS idx_user_games_user ON user_games(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_games_game ON user_games(game_id);
 
 -- Game Checklists (Personal tasks per game)
 CREATE TABLE IF NOT EXISTS checklists (

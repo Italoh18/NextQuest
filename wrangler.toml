@@ -3,6 +3,6 @@ compatibility_date = "2024-03-01"
 pages_build_output_dir = "dist"
 
 [[d1_databases]]
-binding = "DB"
+binding = "db"
 database_name = "nextquest-db"
-database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
+database_id = "191a4a23-20b1-497b-855b-1bbdc67cc263"
