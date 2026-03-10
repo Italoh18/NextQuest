@@ -252,18 +252,18 @@ async function startServer() {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         id ?? null, 
-        title ?? 'Sem título', 
-        description ?? null, 
-        cover_url ?? null, 
-        steam_link ?? null, 
-        epic_link ?? null, 
-        gog_link ?? null, 
+        title ?? '...', 
+        description ?? '...', 
+        cover_url ?? '...', 
+        steam_link ?? '...', 
+        epic_link ?? '...', 
+        gog_link ?? '...', 
         time_to_beat ?? 0, 
         time_to_platinum ?? 0, 
-        review_video_url ?? null, 
-        genre ?? null, 
+        review_video_url ?? '...', 
+        genre ?? '...', 
         public_rating ?? 0,
-        slug ?? null
+        slug ?? '...'
       );
       res.json({ id: info.lastInsertRowid });
     } catch (err: any) {
@@ -286,18 +286,18 @@ async function startServer() {
       time_to_beat = ?, time_to_platinum = ?, review_video_url = ?, genre = ?, public_rating = ?, slug = ?
       WHERE id = ?
     `).run(
-      title ?? 'Sem título', 
-      description ?? null, 
-      cover_url ?? null, 
-      steam_link ?? null, 
-      epic_link ?? null, 
-      gog_link ?? null, 
+      title ?? '...', 
+      description ?? '...', 
+      cover_url ?? '...', 
+      steam_link ?? '...', 
+      epic_link ?? '...', 
+      gog_link ?? '...', 
       time_to_beat ?? 0, 
       time_to_platinum ?? 0, 
-      review_video_url ?? null, 
-      genre ?? null, 
+      review_video_url ?? '...', 
+      genre ?? '...', 
       public_rating ?? 0, 
-      slug ?? null,
+      slug ?? '...',
       req.params.id
     );
     res.json({ success: true });

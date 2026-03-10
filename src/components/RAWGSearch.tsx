@@ -75,14 +75,14 @@ export default function RAWGSearch() {
       // 2. Prepare data for our DB
       const gameData = {
         id: rawgId,
-        title: detail.name || 'Sem título',
-        description: (detail.description_raw || 'Sem descrição').substring(0, 500) + '...',
-        cover_url: detail.background_image || '',
-        genre: detail.genres?.[0]?.name || 'Ação',
-        time_to_beat: detail.playtime || 15,
-        time_to_platinum: Math.round((detail.playtime || 15) * 2.5),
+        title: detail.name || '...',
+        description: (detail.description_raw || '...').substring(0, 500) + '...',
+        cover_url: detail.background_image || '...',
+        genre: detail.genres?.[0]?.name || '...',
+        time_to_beat: detail.playtime || 0,
+        time_to_platinum: Math.round((detail.playtime || 0) * 2.5),
         public_rating: 0, // Reset rating as requested by user
-        slug: detail.slug || ''
+        slug: detail.slug || '...'
       };
 
       // 3. Save to our DB
