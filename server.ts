@@ -251,19 +251,19 @@ async function startServer() {
         INSERT INTO games (id, title, description, cover_url, steam_link, epic_link, gog_link, time_to_beat, time_to_platinum, review_video_url, genre, public_rating, slug)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
-        id || null, 
-        title, 
-        description || null, 
-        cover_url || null, 
-        steam_link || null, 
-        epic_link || null, 
-        gog_link || null, 
-        time_to_beat || 0, 
-        time_to_platinum || 0, 
-        review_video_url || null, 
-        genre || null, 
-        public_rating || 0,
-        slug || null
+        id ?? null, 
+        title ?? 'Sem título', 
+        description ?? null, 
+        cover_url ?? null, 
+        steam_link ?? null, 
+        epic_link ?? null, 
+        gog_link ?? null, 
+        time_to_beat ?? 0, 
+        time_to_platinum ?? 0, 
+        review_video_url ?? null, 
+        genre ?? null, 
+        public_rating ?? 0,
+        slug ?? null
       );
       res.json({ id: info.lastInsertRowid });
     } catch (err: any) {
@@ -286,18 +286,18 @@ async function startServer() {
       time_to_beat = ?, time_to_platinum = ?, review_video_url = ?, genre = ?, public_rating = ?, slug = ?
       WHERE id = ?
     `).run(
-      title, 
-      description || null, 
-      cover_url || null, 
-      steam_link || null, 
-      epic_link || null, 
-      gog_link || null, 
-      time_to_beat || 0, 
-      time_to_platinum || 0, 
-      review_video_url || null, 
-      genre || null, 
-      public_rating || 0, 
-      slug || null,
+      title ?? 'Sem título', 
+      description ?? null, 
+      cover_url ?? null, 
+      steam_link ?? null, 
+      epic_link ?? null, 
+      gog_link ?? null, 
+      time_to_beat ?? 0, 
+      time_to_platinum ?? 0, 
+      review_video_url ?? null, 
+      genre ?? null, 
+      public_rating ?? 0, 
+      slug ?? null,
       req.params.id
     );
     res.json({ success: true });
@@ -323,10 +323,10 @@ async function startServer() {
     const { game_id, status } = req.body;
     if (!game_id) return res.status(400).json({ error: 'ID do jogo é obrigatório' });
 
-    const existing = db.prepare('SELECT id FROM user_games WHERE user_id = ? AND game_id = ?').get(req.user.id, game_id);
+    const existing = db.prepare('SELECT id FROM user_games WHERE user_id = ? AND game_id = ?').get(req.user.id ?? null, game_id ?? null);
     if (existing) return res.status(400).json({ error: 'Este jogo já está na sua biblioteca' });
     
-    db.prepare('INSERT INTO user_games (user_id, game_id, status) VALUES (?, ?, ?)').run(req.user.id, game_id, status || 'backlog');
+    db.prepare('INSERT INTO user_games (user_id, game_id, status) VALUES (?, ?, ?)').run(req.user.id ?? null, game_id ?? null, status ?? 'backlog');
     res.json({ success: true });
   });
 
@@ -351,12 +351,12 @@ async function startServer() {
       user_comment || null, 
       recommend_next_game_id || null, 
       completed_at, 
-      req.params.id, 
-      req.user.id
+      req.params.id ?? null, 
+      req.user.id ?? null
     );
 
     // Update public rating for the game
-    const ug = db.prepare('SELECT game_id FROM user_games WHERE id = ?').get(req.params.id) as any;
+    const ug = db.prepare('SELECT game_id FROM user_games WHERE id = ?').get(req.params.id ?? null) as any;
     if (ug && user_rating) {
       const ratings = db.prepare('SELECT user_rating FROM user_games WHERE game_id = ? AND user_rating IS NOT NULL').all(ug.game_id) as any[];
       if (ratings.length > 0) {
@@ -384,7 +384,7 @@ async function startServer() {
 
   // Checklists
   app.get('/api/checklists/:gameId', authenticate, (req: any, res) => {
-    const list = db.prepare('SELECT * FROM checklists WHERE user_id = ? AND game_id = ?').all(req.user.id, req.params.gameId);
+    const list = db.prepare('SELECT * FROM checklists WHERE user_id = ? AND game_id = ?').all(req.user.id ?? null, req.params.gameId ?? null);
     res.json(list);
   });
 
@@ -397,7 +397,7 @@ async function startServer() {
 
   app.put('/api/checklists/:id', authenticate, (req: any, res) => {
     const { completed } = req.body;
-    db.prepare('UPDATE checklists SET completed = ? WHERE id = ? AND user_id = ?').run(completed ? 1 : 0, req.params.id, req.user.id);
+    db.prepare('UPDATE checklists SET completed = ? WHERE id = ? AND user_id = ?').run(completed ? 1 : 0, req.params.id ?? null, req.user.id ?? null);
     res.json({ success: true });
   });
 
@@ -455,7 +455,7 @@ async function startServer() {
   app.put('/api/admin/users/:id', authenticate, isAdmin, (req, res) => {
     const { role, is_premium } = req.body;
     db.prepare('UPDATE users SET role = ?, is_premium = ? WHERE id = ?')
-      .run(role, is_premium ? 1 : 0, req.params.id);
+      .run(role ?? 'user', is_premium ? 1 : 0, req.params.id ?? null);
     res.json({ success: true });
   });
 
@@ -464,7 +464,7 @@ async function startServer() {
     if (Number(req.params.id) === (req.user as any).id) {
       return res.status(400).json({ error: 'Não é possível excluir a si mesmo' });
     }
-    db.prepare('DELETE FROM users WHERE id = ?').run(req.params.id);
+    db.prepare('DELETE FROM users WHERE id = ?').run(req.params.id ?? null);
     res.json({ success: true });
   });
 
