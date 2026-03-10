@@ -81,8 +81,12 @@ export default function RAWGSearch() {
         genre: detail.genres?.[0]?.name || '...',
         time_to_beat: detail.playtime || 0,
         time_to_platinum: Math.round((detail.playtime || 0) * 2.5),
-        public_rating: 0, // Reset rating as requested by user
-        slug: detail.slug || '...'
+        public_rating: 0,
+        slug: detail.slug || '...',
+        steam_link: null,
+        epic_link: null,
+        gog_link: null,
+        review_video_url: null
       };
 
       // 3. Save to our DB

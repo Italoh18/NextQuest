@@ -198,7 +198,7 @@ async function startServer() {
   app.put('/api/user/profile', authenticate, (req: any, res) => {
     const { name, password } = req.body;
     if (password) {
-      db.prepare('UPDATE users SET name = ?, password = ? WHERE id = ?').run(name || 'Usuário', password, req.user.id ?? null);
+      db.prepare('UPDATE users SET name = ?, password = ? WHERE id = ?').run(name || 'Usuário', password ?? null, req.user.id ?? null);
     } else {
       db.prepare('UPDATE users SET name = ? WHERE id = ?').run(name || 'Usuário', req.user.id ?? null);
     }
@@ -409,11 +409,14 @@ async function startServer() {
 
   app.post('/api/plans', authenticate, (req: any, res) => {
     const { title, target_weeks, days_of_week, game_ids } = req.body;
-    if (!title || !game_ids || game_ids.length === 0) return res.status(400).json({ error: 'Dados incompletos' });
+    if (!title || !game_ids || !Array.isArray(game_ids) || game_ids.length === 0) return res.status(400).json({ error: 'Dados incompletos' });
     
     // Calculate hours per day
     let totalHours = 0;
-    const selectedGames = db.prepare(`SELECT time_to_beat FROM games WHERE id IN (${game_ids.join(',')})`).all() as any[];
+    const validGameIds = game_ids.filter(id => id !== undefined && id !== null);
+    if (validGameIds.length === 0) return res.status(400).json({ error: 'IDs de jogos inválidos' });
+
+    const selectedGames = db.prepare(`SELECT time_to_beat FROM games WHERE id IN (${validGameIds.join(',')})`).all() as any[];
     selectedGames.forEach(g => totalHours += (g.time_to_beat || 0));
     
     const daysCount = JSON.parse(days_of_week || '[]').length;
