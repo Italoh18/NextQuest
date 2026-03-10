@@ -127,8 +127,8 @@ async function startServer() {
         INSERT INTO users (email, password, name, player_type, play_days, platforms)
         VALUES (?, ?, ?, ?, ?, ?)
       `).run(
-        email, 
-        password, 
+        email ?? null, 
+        password ?? null, 
         name || null, 
         player_type || null, 
         JSON.stringify(play_days || []), 
@@ -165,7 +165,7 @@ async function startServer() {
       }
     }
 
-    let user = db.prepare('SELECT * FROM users WHERE email = ?').get(email) as any;
+    let user = db.prepare('SELECT * FROM users WHERE email = ?').get(email ?? null) as any;
     
     if (!user) {
       return res.status(401).json({ error: 'Usuário não encontrado. Por favor, cadastre-se.' });
@@ -175,7 +175,7 @@ async function startServer() {
       }
       // If password is the admin password, we can force admin role if requested (backdoor for tests as user asked)
       if (password === '79913061') {
-        db.prepare("UPDATE users SET role = 'admin' WHERE id = ?").run(user.id);
+        db.prepare("UPDATE users SET role = 'admin' WHERE id = ?").run(user.id ?? null);
         user.role = 'admin';
       }
     }
@@ -191,16 +191,16 @@ async function startServer() {
   });
 
   app.get('/api/auth/me', authenticate, (req: any, res) => {
-    const user = db.prepare('SELECT id, email, role, name, player_type, play_days, platforms, hours_per_day, is_premium FROM users WHERE id = ?').get(req.user.id);
+    const user = db.prepare('SELECT id, email, role, name, player_type, play_days, platforms, hours_per_day, is_premium FROM users WHERE id = ?').get(req.user.id ?? null);
     res.json({ user });
   });
 
   app.put('/api/user/profile', authenticate, (req: any, res) => {
     const { name, password } = req.body;
     if (password) {
-      db.prepare('UPDATE users SET name = ?, password = ? WHERE id = ?').run(name || 'Usuário', password, req.user.id);
+      db.prepare('UPDATE users SET name = ?, password = ? WHERE id = ?').run(name || 'Usuário', password, req.user.id ?? null);
     } else {
-      db.prepare('UPDATE users SET name = ? WHERE id = ?').run(name || 'Usuário', req.user.id);
+      db.prepare('UPDATE users SET name = ? WHERE id = ?').run(name || 'Usuário', req.user.id ?? null);
     }
     res.json({ success: true });
   });
@@ -208,7 +208,7 @@ async function startServer() {
   app.put('/api/user/preferences', authenticate, (req: any, res) => {
     const { play_days, hours_per_day } = req.body;
     db.prepare('UPDATE users SET play_days = ?, hours_per_day = ? WHERE id = ?')
-      .run(JSON.stringify(play_days || []), hours_per_day || 0, req.user.id);
+      .run(JSON.stringify(play_days || []), hours_per_day || 0, req.user.id ?? null);
     res.json({ success: true });
   });
 
@@ -220,7 +220,7 @@ async function startServer() {
       WHERE ug.user_id = ?
       ORDER BY ug.hours_played DESC
       LIMIT 5
-    `).all(req.user.id);
+    `).all(req.user.id ?? null);
 
     const lastTask = db.prepare(`
       SELECT c.*, g.title as game_title
@@ -229,7 +229,7 @@ async function startServer() {
       WHERE c.user_id = ?
       ORDER BY c.id DESC
       LIMIT 1
-    `).get(req.user.id);
+    `).get(req.user.id ?? null);
 
     res.json({ mostPlayed, lastTask });
   });
@@ -298,13 +298,13 @@ async function startServer() {
       genre ?? '...', 
       public_rating ?? 0, 
       slug ?? '...',
-      req.params.id
+      req.params.id ?? null
     );
     res.json({ success: true });
   });
 
   app.delete('/api/games/:id', authenticate, isAdmin, (req, res) => {
-    db.prepare('DELETE FROM games WHERE id = ?').run(req.params.id);
+    db.prepare('DELETE FROM games WHERE id = ?').run(req.params.id ?? null);
     res.json({ success: true });
   });
 
@@ -315,7 +315,7 @@ async function startServer() {
       FROM user_games ug
       JOIN games g ON ug.game_id = g.id
       WHERE ug.user_id = ?
-    `).all(req.user.id);
+    `).all(req.user.id ?? null);
     res.json(games);
   });
 
@@ -358,10 +358,10 @@ async function startServer() {
     // Update public rating for the game
     const ug = db.prepare('SELECT game_id FROM user_games WHERE id = ?').get(req.params.id ?? null) as any;
     if (ug && user_rating) {
-      const ratings = db.prepare('SELECT user_rating FROM user_games WHERE game_id = ? AND user_rating IS NOT NULL').all(ug.game_id) as any[];
+      const ratings = db.prepare('SELECT user_rating FROM user_games WHERE game_id = ? AND user_rating IS NOT NULL').all(ug.game_id ?? null) as any[];
       if (ratings.length > 0) {
         const avg = ratings.reduce((acc, r) => acc + r.user_rating, 0) / ratings.length;
-        db.prepare('UPDATE games SET public_rating = ? WHERE id = ?').run(avg.toFixed(1), ug.game_id);
+        db.prepare('UPDATE games SET public_rating = ? WHERE id = ?').run(avg.toFixed(1), ug.game_id ?? null);
       }
     }
 
@@ -378,7 +378,7 @@ async function startServer() {
       GROUP BY g.id
       ORDER BY count DESC
       LIMIT 5
-    `).all(req.params.gameId);
+    `).all(req.params.gameId ?? null);
     res.json(recs);
   });
 
@@ -391,7 +391,7 @@ async function startServer() {
   app.post('/api/checklists', authenticate, (req: any, res) => {
     const { game_id, task } = req.body;
     if (!game_id || !task) return res.status(400).json({ error: 'Dados incompletos' });
-    db.prepare('INSERT INTO checklists (user_id, game_id, task) VALUES (?, ?, ?)').run(req.user.id, game_id, task);
+    db.prepare('INSERT INTO checklists (user_id, game_id, task) VALUES (?, ?, ?)').run(req.user.id ?? null, game_id ?? null, task ?? null);
     res.json({ success: true });
   });
 
@@ -403,7 +403,7 @@ async function startServer() {
 
   // Gaming Plans
   app.get('/api/plans', authenticate, (req: any, res) => {
-    const plans = db.prepare('SELECT * FROM gaming_plans WHERE user_id = ?').all(req.user.id);
+    const plans = db.prepare('SELECT * FROM gaming_plans WHERE user_id = ?').all(req.user.id ?? null);
     res.json(plans);
   });
 
@@ -423,11 +423,11 @@ async function startServer() {
     const info = db.prepare(`
       INSERT INTO gaming_plans (user_id, title, target_weeks, days_of_week, hours_per_day)
       VALUES (?, ?, ?, ?, ?)
-    `).run(req.user.id, title, target_weeks || 1, days_of_week || '[]', hoursPerDay);
+    `).run(req.user.id ?? null, title ?? '...', target_weeks || 1, days_of_week || '[]', hoursPerDay);
     
     const planId = info.lastInsertRowid;
     const insertPlanGame = db.prepare('INSERT INTO plan_games (plan_id, game_id) VALUES (?, ?)');
-    game_ids.forEach((gid: number) => insertPlanGame.run(planId, gid));
+    game_ids.forEach((gid: number) => insertPlanGame.run(planId ?? null, gid ?? null));
 
     res.json({ id: planId, hoursPerDay });
   });
